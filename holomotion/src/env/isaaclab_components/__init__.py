@@ -55,3 +55,9 @@ from holomotion.src.env.isaaclab_components.isaaclab_velocity_tracking_command i
     build_velocity_commands_config,
     VelTrack_CommandsCfg,
 )
+from holomotion.src.env.isaaclab_components.isaaclab_quiet_goal_command import (
+    build_quiet_goal_velocity_commands_config,
+    QuietGoalTaskState,
+    QuietGoalVelocityCommandCfg,
+    QuietGoalVelocityCommandsCfg,
+)
