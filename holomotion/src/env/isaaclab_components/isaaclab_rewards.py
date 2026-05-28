@@ -1281,6 +1281,61 @@ def feet_slide(
     return reward
 
 
+def _contact_force_rate_from_history(
+    forces_w_history: torch.Tensor,
+    body_ids: list[int],
+) -> torch.Tensor:
+    forces_z = torch.abs(forces_w_history[:, :, body_ids, 2])
+    force_delta = torch.abs(forces_z[:, 1:] - forces_z[:, :-1])
+    return force_delta.sum(dim=1).sum(dim=1)
+
+
+def _touchdown_vertical_speed(
+    prev_contact: torch.Tensor,
+    cur_contact: torch.Tensor,
+    body_vel_z: torch.Tensor,
+) -> torch.Tensor:
+    new_contact = cur_contact & ~prev_contact
+    downward_speed = torch.clamp(-body_vel_z, min=0.0)
+    return torch.sum(downward_speed * new_contact.to(body_vel_z.dtype), dim=1)
+
+
+def feet_contact_force_rate_l1(
+    env: ManagerBasedRLEnv,
+    sensor_cfg: SceneEntityCfg,
+) -> torch.Tensor:
+    """Penalize sharp vertical contact force changes at the feet."""
+    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+    return _contact_force_rate_from_history(
+        contact_sensor.data.net_forces_w_history,
+        sensor_cfg.body_ids,
+    )
+
+
+def feet_touchdown_vertical_velocity_l1(
+    env: ManagerBasedRLEnv,
+    sensor_cfg: SceneEntityCfg,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
+    """Penalize downward foot speed when a foot first makes contact."""
+    contact_sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+    history = (
+        contact_sensor.data.net_forces_w_history[:, :, sensor_cfg.body_ids, :]
+        .norm(dim=-1)
+        > 1.0
+    )
+    prev_contact = history[:, -2]
+    cur_contact = history[:, -1]
+
+    asset: Articulation = env.scene[asset_cfg.name]
+    body_vel_z = asset.data.body_lin_vel_w[:, asset_cfg.body_ids, 2]
+    return _touchdown_vertical_speed(
+        prev_contact,
+        cur_contact,
+        body_vel_z,
+    )
+
+
 def feet_slide_ang_vel(
     env: ManagerBasedRLEnv,
     sensor_cfg: SceneEntityCfg,
