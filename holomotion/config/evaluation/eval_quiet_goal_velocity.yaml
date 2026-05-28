@@ -1,0 +1,20 @@
+# @package _global_
+
+defaults:
+  - /robot: unitree/G1/29dof/29dof_training_isaaclab
+  - /env: quiet_goal_velocity_tracking
+  - /env/observations: velocity_tracking/obs_quiet_goal_velocity
+  - /env/rewards: velocity_tracking/rew_quiet_goal_velocity
+  - /env/terrain: isaaclab_plane
+  - /env/terminations: NO_termination
+  - /env/domain_randomization: NO_domain_rand
+
+project_name: ???
+experiment_name: ???
+num_envs: ???
+headless: ???
+checkpoint: null
+
+num_processes: 1
+main_process: true
+process_id: 0

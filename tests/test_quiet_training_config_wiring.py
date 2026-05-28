@@ -88,3 +88,25 @@ def test_quiet_domain_randomization_keeps_contact_sensitive_physics():
     assert domain_rand["rigid_body_material"]["params"][
         "restitution_range"
     ] == [0.0, 0.02]
+
+
+def test_quiet_scripts_source_train_env_and_use_expected_configs():
+    train_script = ROOT / "holomotion/scripts/training/train_quiet_goal_velocity.sh"
+    eval_script = ROOT / "holomotion/scripts/evaluation/eval_quiet_goal_velocity.sh"
+    eval_cfg = ROOT / "holomotion/config/evaluation/eval_quiet_goal_velocity.yaml"
+
+    train_text = train_script.read_text()
+    eval_text = eval_script.read_text()
+    eval_cfg_text = eval_cfg.read_text()
+
+    assert "source train.env" in train_text
+    assert "source train.env" in eval_text
+    assert "${Train_CONDA_PREFIX}" in train_text
+    assert "${Train_CONDA_PREFIX}" in eval_text
+    assert (
+        "--config-name=training/velocity_tracking/"
+        "train_g1_29dof_quiet_goal_velocity_mlp"
+        in train_text
+    )
+    assert "--config-name=evaluation/eval_quiet_goal_velocity" in eval_text
+    assert "/env: quiet_goal_velocity_tracking" in eval_cfg_text
