@@ -2,6 +2,17 @@
 
 This guide describes the staged training schedule for the quiet, navigable WBC policy. Use the existing `holomotion` conda environment and do not install new packages during this workflow.
 
+## Reference Data Prep
+
+Prepare the current Bones Seed G1 walking references before Stage 1:
+
+```bash
+PYTHONPATH=. conda run -n holomotion python \
+  holomotion/src/data_curation/prepare_bones_seed_g1_quiet_refs.py
+```
+
+The script searches `/data/jun7.shi/datasets/bones-seed/metadata/seed_metadata_v004.csv`, copies selected G1 CSV clips into `data/quiet_references/g1/bones_seed_csv/`, and writes `data/quiet_references/g1_quiet_metadata.yaml`. The generated `data/` files are intentionally ignored by git. Current Bones Seed straight-walk clips cover roughly `0.5`, `0.6`, `0.8`, and `1.0 m/s`; lower-speed quiet references should still come from Kimodo or another generator.
+
 ## Stage 1: Style Acquisition
 
 - Commands: `vx [-0.3, 0.5]`, `vy [-0.15, 0.15]`, `yaw [-0.4, 0.4]`.
