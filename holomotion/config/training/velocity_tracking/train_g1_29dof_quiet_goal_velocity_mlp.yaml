@@ -13,6 +13,7 @@ defaults:
   - /modules: velocity_tracking/velocity_tracking_mlp
 
 project_name: HoloMotionQuietGoalVelocityG1
+train_hdf5_roots: []
 
 env:
   config:

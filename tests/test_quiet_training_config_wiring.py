@@ -2,7 +2,6 @@ from pathlib import Path
 
 import yaml
 
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -29,6 +28,15 @@ def test_quiet_training_config_uses_dedicated_env_and_obs():
         {"/modules": "velocity_tracking/velocity_tracking_mlp"},
     ]
     assert cfg["project_name"] == "HoloMotionQuietGoalVelocityG1"
+
+
+def test_quiet_training_config_defines_unused_motion_roots():
+    cfg = _read_yaml(
+        "holomotion/config/training/velocity_tracking/"
+        "train_g1_29dof_quiet_goal_velocity_mlp.yaml"
+    )
+
+    assert cfg["train_hdf5_roots"] == []
 
 
 def test_quiet_env_targets_dedicated_wrapper():
@@ -91,9 +99,15 @@ def test_quiet_domain_randomization_keeps_contact_sensitive_physics():
 
 
 def test_quiet_scripts_source_train_env_and_use_expected_configs():
-    train_script = ROOT / "holomotion/scripts/training/train_quiet_goal_velocity.sh"
-    eval_script = ROOT / "holomotion/scripts/evaluation/eval_quiet_goal_velocity.sh"
-    eval_cfg = ROOT / "holomotion/config/evaluation/eval_quiet_goal_velocity.yaml"
+    train_script = (
+        ROOT / "holomotion/scripts/training/train_quiet_goal_velocity.sh"
+    )
+    eval_script = (
+        ROOT / "holomotion/scripts/evaluation/eval_quiet_goal_velocity.sh"
+    )
+    eval_cfg = (
+        ROOT / "holomotion/config/evaluation/eval_quiet_goal_velocity.yaml"
+    )
 
     train_text = train_script.read_text()
     eval_text = eval_script.read_text()

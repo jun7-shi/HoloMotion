@@ -15,16 +15,16 @@
 # permissions and limitations under the License.
 
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import hydra
-from hydra.utils import get_class
-from omegaconf import ListConfig, OmegaConf
-
 from accelerate import Accelerator
 from accelerate.utils import ProjectConfiguration
+from hydra.utils import get_class
 from loguru import logger
+from omegaconf import ListConfig, OmegaConf
+
 from holomotion.src.training.reference_filter_export import (
     export_reference_filter_artifacts_from_config,
 )
@@ -99,6 +99,15 @@ def _exec_mujoco_eval(eval_override_dict: dict) -> None:
     os.execv(sys.executable, argv)
 
 
+def _get_enabled_mujoco_eval_config(config: OmegaConf):
+    mujoco_eval_cfg = OmegaConf.select(config, "mujoco_eval", default=None)
+    if mujoco_eval_cfg is None:
+        return None
+    if not bool(mujoco_eval_cfg.get("enabled", False)):
+        return None
+    return mujoco_eval_cfg
+
+
 def _maybe_export_reference_filter_artifacts(config: OmegaConf) -> None:
     debug_cfg = getattr(config, "debug_reference_filter_export", None)
     if debug_cfg is None or not bool(debug_cfg.get("enabled", False)):
@@ -125,9 +134,10 @@ def main(config: OmegaConf):
     config = compile_config(config, accelerator=None)
     dist = None
 
-    # In distributed runs, Hydra resolves ${now:...} per process so experiment_save_dir
-    # can differ by rank (e.g. staggered startup). Use Accelerator to init the process
-    # group, then broadcast rank 0's path so all ranks write to the same directory.
+    # In distributed runs, Hydra resolves ${now:...} per process so
+    # experiment_save_dir can differ by rank (e.g. staggered startup). Use
+    # Accelerator to init the process group, then broadcast rank 0's path so
+    # all ranks write to the same directory.
     if getattr(config, "num_processes", 1) > 1:
         project_config = ProjectConfiguration(
             project_dir=config.experiment_save_dir,
@@ -161,7 +171,8 @@ def main(config: OmegaConf):
     algo.load(config.checkpoint)
     algo.learn()
 
-    if not bool(config.mujoco_eval.get("enabled", False)):
+    mujoco_eval_cfg = _get_enabled_mujoco_eval_config(config)
+    if mujoco_eval_cfg is None:
         return
     if not bool(config.algo.config.get("export_policy", False)):
         msg = (
@@ -176,10 +187,10 @@ def main(config: OmegaConf):
 
     exported_dir = Path(log_dir) / "exported"
     selected_onnx_names = _resolve_mujoco_eval_onnx_names(
-        exported_dir, config.mujoco_eval.get("ckpt_onnx_names", None)
+        exported_dir, mujoco_eval_cfg.get("ckpt_onnx_names", None)
     )
     eval_override_dict = OmegaConf.to_container(
-        config.mujoco_eval, resolve=True
+        mujoco_eval_cfg, resolve=True
     )
     eval_override_dict.pop("enabled", None)
     eval_override_dict["ckpt_onnx_root_dir"] = str(exported_dir)
