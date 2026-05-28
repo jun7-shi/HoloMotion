@@ -55,3 +55,21 @@ def test_velocity_env_dispatches_quiet_command_builder():
 
     assert "build_quiet_goal_velocity_commands_config" in source
     assert 'command_type == "QuietGoalVelocityCommandCfg"' in source
+
+
+def test_quiet_reward_config_uses_grouped_task_rewards():
+    cfg = _read_yaml(
+        "holomotion/config/env/rewards/velocity_tracking/"
+        "rew_quiet_goal_velocity.yaml"
+    )
+
+    assert set(cfg["rewards"]) == {
+        "common",
+        "quiet_style_imitation",
+        "goal_velocity_generalization",
+    }
+    assert "feet_contact_force_rate_l1" in cfg["rewards"]["common"]
+    assert (
+        "quiet_reference_joint_pose_l2"
+        in cfg["rewards"]["quiet_style_imitation"]
+    )

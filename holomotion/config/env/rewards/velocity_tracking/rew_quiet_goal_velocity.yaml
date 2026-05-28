@@ -1,0 +1,63 @@
+# @package _global_
+
+rewards:
+  common:
+    track_lin_vel_xy_heading_aligned_frame_exp:
+      weight: 1.0
+      params:
+        std: 0.25
+    track_ang_vel_z_heading_aligned_frame_exp:
+      weight: 0.5
+      params:
+        std: 0.25
+    feet_slide:
+      weight: -0.35
+      params:
+        sensor_cfg:
+          name: contact_forces
+          body_names: [".*_ankle_roll_link"]
+        asset_cfg:
+          name: robot
+          body_names: [".*_ankle_roll_link"]
+    feet_contact_force_rate_l1:
+      weight: -0.002
+      params:
+        sensor_cfg:
+          name: contact_forces
+          body_names: [".*_ankle_roll_link"]
+    feet_touchdown_vertical_velocity_l1:
+      weight: -0.15
+      params:
+        sensor_cfg:
+          name: contact_forces
+          body_names: [".*_ankle_roll_link"]
+        asset_cfg:
+          name: robot
+          body_names: [".*_ankle_roll_link"]
+    action_rate_l2:
+      weight: -0.01
+      params: {}
+    joint_acc_l2:
+      weight: -2.5e-7
+      params:
+        asset_cfg:
+          name: robot
+          joint_names: [".*"]
+
+  quiet_style_imitation:
+    quiet_reference_joint_pose_l2:
+      weight: -0.05
+      params:
+        lower_body_joint_pattern: ".*(hip|knee|ankle).*"
+    quiet_reference_base_velocity_l2:
+      weight: -0.10
+      params: {}
+
+  goal_velocity_generalization:
+    feet_air_time_v4:
+      weight: 0.20
+      params:
+        command_name: base_velocity
+        sensor_cfg:
+          name: contact_forces
+          body_names: [".*_ankle_roll_link"]

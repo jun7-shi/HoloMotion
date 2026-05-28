@@ -105,3 +105,49 @@ def test_feet_contact_force_rate_reads_sensor(monkeypatch):
     penalty = rewards.feet_contact_force_rate_l1(env, sensor_cfg=sensor_cfg)
 
     assert torch.allclose(penalty, torch.tensor([60.0]))
+
+
+def test_quiet_reference_rewards_return_zero_without_reference_state(
+    monkeypatch,
+):
+    rewards = _load_quiet_rewards_module(monkeypatch)
+    env = SimpleNamespace(num_envs=2, device="cpu")
+
+    joint_penalty = rewards.quiet_reference_joint_pose_l2(
+        env,
+        lower_body_joint_pattern=".*",
+    )
+    velocity_penalty = rewards.quiet_reference_base_velocity_l2(env)
+
+    assert torch.equal(joint_penalty, torch.zeros(2))
+    assert torch.equal(velocity_penalty, torch.zeros(2))
+
+
+def test_quiet_reference_rewards_delegate_to_reference_state(monkeypatch):
+    rewards = _load_quiet_rewards_module(monkeypatch)
+
+    class _ReferenceState:
+        def joint_pose_error(self, env, lower_body_joint_pattern, asset_cfg):
+            assert env.num_envs == 2
+            assert lower_body_joint_pattern == ".*ankle.*"
+            assert asset_cfg.name == "robot"
+            return torch.tensor([0.1, 0.2])
+
+        def base_velocity_error(self, env):
+            assert env.num_envs == 2
+            return torch.tensor([0.3, 0.4])
+
+    env = SimpleNamespace(
+        num_envs=2,
+        device="cpu",
+        quiet_reference_state=_ReferenceState(),
+    )
+
+    joint_penalty = rewards.quiet_reference_joint_pose_l2(
+        env,
+        lower_body_joint_pattern=".*ankle.*",
+    )
+    velocity_penalty = rewards.quiet_reference_base_velocity_l2(env)
+
+    assert torch.equal(joint_penalty, torch.tensor([0.1, 0.2]))
+    assert torch.equal(velocity_penalty, torch.tensor([0.3, 0.4]))

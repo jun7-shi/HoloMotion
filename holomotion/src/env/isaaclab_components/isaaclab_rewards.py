@@ -1336,6 +1336,32 @@ def feet_touchdown_vertical_velocity_l1(
     )
 
 
+def quiet_reference_joint_pose_l2(
+    env: ManagerBasedRLEnv,
+    lower_body_joint_pattern: str,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
+    """Reference-guided lower-body pose style penalty."""
+    reference_state = getattr(env, "quiet_reference_state", None)
+    if reference_state is None:
+        return torch.zeros(env.num_envs, device=env.device)
+    return reference_state.joint_pose_error(
+        env,
+        lower_body_joint_pattern,
+        asset_cfg,
+    )
+
+
+def quiet_reference_base_velocity_l2(
+    env: ManagerBasedRLEnv,
+) -> torch.Tensor:
+    """Reference-guided base velocity style penalty."""
+    reference_state = getattr(env, "quiet_reference_state", None)
+    if reference_state is None:
+        return torch.zeros(env.num_envs, device=env.device)
+    return reference_state.base_velocity_error(env)
+
+
 def feet_slide_ang_vel(
     env: ManagerBasedRLEnv,
     sensor_cfg: SceneEntityCfg,
