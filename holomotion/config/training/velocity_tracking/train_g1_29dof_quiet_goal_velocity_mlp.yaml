@@ -1,0 +1,39 @@
+# @package _global_
+
+defaults:
+  - /training: train_base
+  - /algo: ppo
+  - /robot: unitree/G1/29dof/29dof_training_isaaclab
+  - /env: quiet_goal_velocity_tracking
+  - /env/terminations: termination_velocity_tracking
+  - /env/observations: velocity_tracking/obs_quiet_goal_velocity
+  - /env/rewards: velocity_tracking/rew_quiet_goal_velocity
+  - /env/domain_randomization: domain_rand_quiet_medium
+  - /env/terrain: isaaclab_rough
+  - /modules: velocity_tracking/velocity_tracking_mlp
+
+project_name: HoloMotionQuietGoalVelocityG1
+
+env:
+  config:
+    commands:
+      base_velocity:
+        params:
+          resampling_time_range: [3.0, 6.0]
+          rel_standing_envs: 0.2
+          rel_yaw_envs: 0.2
+          heading_command: false
+          quiet_mode_prob: 1.0
+          imitation_prob_initial: 1.0
+          imitation_prob_final: 0.5
+          ranges:
+            lin_vel_x: [-0.4, 0.8]
+            lin_vel_y: [-0.25, 0.25]
+            ang_vel_z: [-0.6, 0.6]
+            heading: [-3.14, 3.14]
+
+algo:
+  config:
+    symmetry_loss:
+      enabled: true
+      coef: 0.1
