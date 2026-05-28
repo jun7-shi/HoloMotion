@@ -15,17 +15,29 @@
 # permissions and limitations under the License.
 
 from __future__ import annotations
-
 from dataclasses import MISSING, dataclass
+from importlib import import_module
 from typing import Sequence
 
-from isaaclab.utils import configclass
 import torch
+from isaaclab.utils import configclass
 
-from holomotion.src.env.isaaclab_components.isaaclab_velocity_tracking_command import (
-    HoloMotionUniformVelocityCommand,
-    HoloMotionUniformVelocityCommandCfg,
-    _convert_ranges_dict_to_object,
+from holomotion.src.env.isaaclab_components.quiet_reference import (
+    QuietReferenceState,
+)
+
+_velocity_command = import_module(
+    "holomotion.src.env.isaaclab_components."
+    "isaaclab_velocity_tracking_command"
+)
+HoloMotionUniformVelocityCommand = (
+    _velocity_command.HoloMotionUniformVelocityCommand
+)
+HoloMotionUniformVelocityCommandCfg = (
+    _velocity_command.HoloMotionUniformVelocityCommandCfg
+)
+_convert_ranges_dict_to_object = (
+    _velocity_command._convert_ranges_dict_to_object
 )
 
 
@@ -91,6 +103,15 @@ class QuietGoalVelocityCommand(HoloMotionUniformVelocityCommand):
         self.task_state = QuietGoalTaskState(self.num_envs, self.device)
         env.holo_task_ids = self.task_state.task_ids
         env.holo_task_name_to_id = self.task_state.task_name_to_id
+        self._pending_reference_env_ids: torch.Tensor | None = None
+        self.quiet_reference_state = None
+        if str(self.cfg.reference_metadata_path).strip():
+            self.quiet_reference_state = QuietReferenceState.from_yaml(
+                self.cfg.reference_metadata_path,
+                num_envs=self.num_envs,
+                device=self.device,
+            )
+            env.quiet_reference_state = self.quiet_reference_state
 
     @property
     def quiet_mode(self) -> torch.Tensor:
@@ -117,6 +138,21 @@ class QuietGoalVelocityCommand(HoloMotionUniformVelocityCommand):
         )
         self.task_state.assign(env_ids_t, imitation_mask)
         self.task_state.assign_quiet_mode(env_ids_t, quiet_mask)
+        self._pending_reference_env_ids = env_ids_t
+
+    def _update_command(self):
+        super()._update_command()
+        if (
+            self.quiet_reference_state is None
+            or self._pending_reference_env_ids is None
+        ):
+            return
+        env_ids = self._pending_reference_env_ids
+        self.quiet_reference_state.assign_by_command(
+            env_ids=env_ids,
+            commands_b=self.vel_command_b[env_ids],
+        )
+        self._pending_reference_env_ids = None
 
 
 @configclass

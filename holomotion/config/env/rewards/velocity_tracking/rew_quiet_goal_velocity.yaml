@@ -14,24 +14,29 @@ rewards:
       weight: -0.35
       params:
         sensor_cfg:
+          _target_: isaaclab.managers.scene_entity_cfg.SceneEntityCfg
           name: contact_forces
           body_names: [".*_ankle_roll_link"]
         asset_cfg:
+          _target_: isaaclab.managers.scene_entity_cfg.SceneEntityCfg
           name: robot
           body_names: [".*_ankle_roll_link"]
     feet_contact_force_rate_l1:
       weight: -0.002
       params:
         sensor_cfg:
+          _target_: isaaclab.managers.scene_entity_cfg.SceneEntityCfg
           name: contact_forces
           body_names: [".*_ankle_roll_link"]
     feet_touchdown_vertical_velocity_l1:
       weight: -0.15
       params:
         sensor_cfg:
+          _target_: isaaclab.managers.scene_entity_cfg.SceneEntityCfg
           name: contact_forces
           body_names: [".*_ankle_roll_link"]
         asset_cfg:
+          _target_: isaaclab.managers.scene_entity_cfg.SceneEntityCfg
           name: robot
           body_names: [".*_ankle_roll_link"]
     action_rate_l2:
@@ -41,6 +46,7 @@ rewards:
       weight: -2.5e-7
       params:
         asset_cfg:
+          _target_: isaaclab.managers.scene_entity_cfg.SceneEntityCfg
           name: robot
           joint_names: [".*"]
 
@@ -59,5 +65,6 @@ rewards:
       params:
         command_name: base_velocity
         sensor_cfg:
+          _target_: isaaclab.managers.scene_entity_cfg.SceneEntityCfg
           name: contact_forces
           body_names: [".*_ankle_roll_link"]

@@ -83,6 +83,24 @@ def test_quiet_reward_config_uses_grouped_task_rewards():
     )
 
 
+def test_quiet_reward_scene_entity_params_are_instantiable():
+    cfg = _read_yaml(
+        "holomotion/config/env/rewards/velocity_tracking/"
+        "rew_quiet_goal_velocity.yaml"
+    )
+
+    scene_entity_target = "isaaclab.managers.scene_entity_cfg.SceneEntityCfg"
+    assert cfg["rewards"]["common"]["feet_slide"]["params"]["sensor_cfg"][
+        "_target_"
+    ] == scene_entity_target
+    assert cfg["rewards"]["common"]["feet_slide"]["params"]["asset_cfg"][
+        "_target_"
+    ] == scene_entity_target
+    assert cfg["rewards"]["goal_velocity_generalization"]["feet_air_time_v4"][
+        "params"
+    ]["sensor_cfg"]["_target_"] == scene_entity_target
+
+
 def test_quiet_domain_randomization_keeps_contact_sensitive_physics():
     cfg = _read_yaml(
         "holomotion/config/env/domain_randomization/"

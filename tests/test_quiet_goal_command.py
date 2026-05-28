@@ -5,7 +5,6 @@ from types import ModuleType, SimpleNamespace
 
 import torch
 
-
 MODULE_PATH = (
     Path(__file__).resolve().parents[1]
     / "holomotion"
@@ -21,10 +20,16 @@ class _FakeVelocityCommand:
         self.cfg = cfg
         self.num_envs = env.num_envs
         self.device = env.device
+        self.vel_command_b = torch.zeros(self.num_envs, 3)
         self.parent_resample_called = False
+        self.parent_update_called = False
 
-    def _resample_command(self, _env_ids):
+    def _resample_command(self, env_ids):
         self.parent_resample_called = True
+        self.vel_command_b[env_ids] = torch.tensor([0.5, 0.0, 0.1])
+
+    def _update_command(self):
+        self.parent_update_called = True
 
 
 class _FakeVelocityCommandCfg:
@@ -57,8 +62,33 @@ def _load_quiet_command_module(monkeypatch):
         _convert_ranges_dict_to_object
     )
 
+    quiet_reference_module = ModuleType(
+        "holomotion.src.env.isaaclab_components.quiet_reference"
+    )
+
+    class _FakeReferenceState:
+        def __init__(self, path, num_envs, device):
+            self.path = path
+            self.num_envs = num_envs
+            self.device = device
+            self.assigned = None
+
+        @classmethod
+        def from_yaml(cls, path, num_envs, device):
+            return cls(path=path, num_envs=num_envs, device=device)
+
+        def assign_by_command(self, env_ids, commands_b):
+            self.assigned = (env_ids.clone(), commands_b.clone())
+
+    quiet_reference_module.QuietReferenceState = _FakeReferenceState
+
     monkeypatch.setitem(sys.modules, "isaaclab.utils", isaaclab_utils)
     monkeypatch.setitem(sys.modules, velocity_module.__name__, velocity_module)
+    monkeypatch.setitem(
+        sys.modules,
+        quiet_reference_module.__name__,
+        quiet_reference_module,
+    )
 
     spec = importlib.util.spec_from_file_location(
         "isaaclab_quiet_goal_command_under_test",
@@ -131,3 +161,44 @@ def test_builder_accepts_quiet_goal_velocity_command(monkeypatch):
     assert isinstance(cfg.base_velocity, module.QuietGoalVelocityCommandCfg)
     assert cfg.base_velocity.quiet_mode_prob == 1.0
     assert cfg.base_velocity.ranges.lin_vel_x == (-0.4, 0.8)
+
+
+def test_command_attaches_reference_state_from_metadata(monkeypatch):
+    module = _load_quiet_command_module(monkeypatch)
+    cfg = SimpleNamespace(
+        reference_metadata_path="data/quiet_references/g1_quiet_metadata.yaml",
+        imitation_prob_initial=1.0,
+        quiet_mode_prob=1.0,
+    )
+    env = SimpleNamespace(num_envs=2, device="cpu")
+
+    command = module.QuietGoalVelocityCommand(cfg, env)
+
+    assert env.quiet_reference_state.path == (
+        "data/quiet_references/g1_quiet_metadata.yaml"
+    )
+    assert command.quiet_reference_state is env.quiet_reference_state
+
+
+def test_command_assigns_reference_after_command_update(monkeypatch):
+    module = _load_quiet_command_module(monkeypatch)
+    cfg = SimpleNamespace(
+        reference_metadata_path="data/quiet_references/g1_quiet_metadata.yaml",
+        imitation_prob_initial=1.0,
+        quiet_mode_prob=1.0,
+    )
+    env = SimpleNamespace(num_envs=2, device="cpu")
+    command = module.QuietGoalVelocityCommand(cfg, env)
+
+    command._resample_command([0, 1])
+    command._update_command()
+
+    assigned_env_ids, assigned_commands = (
+        command.quiet_reference_state.assigned
+    )
+    assert command.parent_update_called
+    assert torch.equal(assigned_env_ids, torch.tensor([0, 1]))
+    assert torch.equal(
+        assigned_commands,
+        torch.tensor([[0.5, 0.0, 0.1], [0.5, 0.0, 0.1]]),
+    )
