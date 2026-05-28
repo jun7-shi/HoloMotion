@@ -73,3 +73,18 @@ def test_quiet_reward_config_uses_grouped_task_rewards():
         "quiet_reference_joint_pose_l2"
         in cfg["rewards"]["quiet_style_imitation"]
     )
+
+
+def test_quiet_domain_randomization_keeps_contact_sensitive_physics():
+    cfg = _read_yaml(
+        "holomotion/config/env/domain_randomization/"
+        "domain_rand_quiet_medium.yaml"
+    )
+    domain_rand = cfg["domain_rand"]
+
+    assert "rigid_body_material" in domain_rand
+    assert "action_delay" in domain_rand
+    assert "obs_noise" in domain_rand
+    assert domain_rand["rigid_body_material"]["params"][
+        "restitution_range"
+    ] == [0.0, 0.02]
