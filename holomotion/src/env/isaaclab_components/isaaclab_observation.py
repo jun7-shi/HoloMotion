@@ -139,7 +139,7 @@ class MirrorFunctions:
 
     @staticmethod
     def mirror_velocity_command(x: torch.Tensor) -> torch.Tensor:
-        """Mirror velocity command [..., 3] or [..., 4] preserving move_mask."""
+        """Mirror velocity command preserving move_mask and quiet_mode."""
         last_dim = x.shape[-1]
         if last_dim == 3:
             sign = torch.tensor(
@@ -151,8 +151,16 @@ class MirrorFunctions:
                 [1.0, 1.0, -1.0, -1.0], device=x.device, dtype=x.dtype
             ).view(*([1] * (x.ndim - 1)), 4)
             return x * sign
+        if last_dim == 5:
+            sign = torch.tensor(
+                [1.0, 1.0, -1.0, -1.0, 1.0],
+                device=x.device,
+                dtype=x.dtype,
+            ).view(*([1] * (x.ndim - 1)), 5)
+            return x * sign
         raise ValueError(
-            f"mirror_velocity_command expected last dim 3 or 4, got {last_dim}"
+            "mirror_velocity_command expected last dim 3, 4, or 5, "
+            f"got {last_dim}"
         )
 
 
@@ -1622,6 +1630,45 @@ class ObservationFunctions:
             ],
             dim=-1,
         )  # [num_envs, 4]
+
+    @staticmethod
+    def _get_obs_quiet_goal_velocity_command(
+        env: ManagerBasedRLEnv,
+    ):
+        """Velocity command with deployment-visible quiet mode."""
+        velocity_command = isaaclab_mdp.generated_commands(
+            env,
+            command_name="base_velocity",
+        )
+        if velocity_command.shape[-1] > 3:
+            velocity_command = velocity_command[..., :3]
+        move_mask = (velocity_command.norm(dim=-1) > 0.1).to(
+            dtype=velocity_command.dtype
+        )
+        command_term = env.command_manager.get_term("base_velocity")
+        quiet_mode = command_term.quiet_mode.to(
+            device=velocity_command.device,
+            dtype=velocity_command.dtype,
+        )
+        return torch.cat(
+            [
+                move_mask[..., None],
+                velocity_command,
+                quiet_mode[..., None],
+            ],
+            dim=-1,
+        )  # [num_envs, 5]
+
+    @staticmethod
+    def _get_obs_quiet_task_id(
+        env: ManagerBasedRLEnv,
+    ):
+        """Critic-only quiet-goal task id."""
+        command_term = env.command_manager.get_term("base_velocity")
+        return command_term.task_ids.to(
+            device=env.device,
+            dtype=torch.float32,
+        ).view(env.num_envs, 1)
 
     @staticmethod
     def _get_obs_place_holder(env: ManagerBasedRLEnv, n_dim: int):
