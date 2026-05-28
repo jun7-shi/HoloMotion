@@ -43,6 +43,7 @@ from holomotion.src.env.isaaclab_components import (
     CurriculumCfg,
     build_actions_config,
     build_motion_tracking_commands_config,
+    build_quiet_goal_velocity_commands_config,
     build_velocity_commands_config,
     build_domain_rand_config,
     build_curriculum_config,
@@ -279,9 +280,18 @@ class VelocityTrackingEnv:
             viewer: ViewerCfg = ViewerCfg(origin_type="world")
 
             command_name = list(_commands_config_dict.keys())[0]
-            commands: VelTrack_CommandsCfg = build_velocity_commands_config(
-                _commands_config_dict
+            command_type = _commands_config_dict[command_name].get(
+                "type",
+                "HoloMotionUniformVelocityCommandCfg",
             )
+            if command_type == "QuietGoalVelocityCommandCfg":
+                commands = build_quiet_goal_velocity_commands_config(
+                    _commands_config_dict
+                )
+            else:
+                commands: VelTrack_CommandsCfg = build_velocity_commands_config(
+                    _commands_config_dict
+                )
             observations: ObservationsCfg = build_observations_config(
                 _obs_config_dict.obs_groups
             )

@@ -48,3 +48,10 @@ def test_quiet_env_targets_dedicated_wrapper():
         "quiet_style_imitation",
         "goal_velocity_generalization",
     ]
+
+
+def test_velocity_env_dispatches_quiet_command_builder():
+    source = (ROOT / "holomotion/src/env/velocity_tracking.py").read_text()
+
+    assert "build_quiet_goal_velocity_commands_config" in source
+    assert 'command_type == "QuietGoalVelocityCommandCfg"' in source
